@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="my">
+<head>
+    <meta charset="UTF-8">
+    <title>Gemini SRT Translator</title>
+    <style>
+        body { font-family: sans-serif; display: flex; justify-content: center; padding: 50px; background: #f4f4f9; }
+        .card { background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); width: 400px; }
+        input, button { width: 100%; margin: 10px 0; padding: 10px; border-radius: 5px; border: 1px solid #ddd; }
+        button { background: #007bff; color: white; border: none; cursor: pointer; }
+        button:disabled { background: #ccc; }
+        #downloadBtn { background: #28a745; display: none; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h2>SRT Translator</h2>
+        <input type="file" id="fileInput" accept=".srt">
+        <button id="translateBtn">Translate</button>
+        <p id="status"></p>
+        <button id="downloadBtn">Download Translated SRT</button>
+    </div>
+
+    <script>
+        let translatedBlobUrl = null;
+
+        document.getElementById('translateBtn').onclick = async () => {
+            const file = document.getElementById('fileInput').files[0];
+            if (!file) return alert("ဖိုင်အရင်ရွေးပါ");
+
+            const status = document.getElementById('status');
+            const btn = document.getElementById('translateBtn');
+            const dlBtn = document.getElementById('downloadBtn');
+
+            status.innerText = "ဘာသာပြန်နေပါသည်... ခဏစောင့်ပါ။";
+            btn.disabled = true;
+
+            const formData = new FormData();
+            formData.append("file", file);
+
+            try {
+                const res = await fetch("/api/translate", { method: "POST", body: formData });
+                const data = await res.json();
+
+                if (data.success) {
+                    const blob = new Blob([data.translatedText], { type: "text/plain" });
+                    translatedBlobUrl = URL.createObjectURL(blob);
+                    dlBtn.style.display = "block";
+                    status.innerText = "ဘာသာပြန်ပြီးပါပြီ။";
+                } else {
+                    status.innerText = "Error: " + data.error;
+                }
+            } catch (e) {
+                status.innerText = "Error ဖြစ်သွားပါပြီ။";
+            } finally {
+                btn.disabled = false;
+            }
+        };
+
+        document.getElementById('downloadBtn').onclick = () => {
+            const a = document.createElement("a");
+            a.href = translatedBlobUrl;
+            a.download = "translated_burmese.srt";
+            a.click();
+        };
+    </script>
+</body>
+</html>
