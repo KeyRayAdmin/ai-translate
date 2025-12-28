@@ -5,15 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SRT Translator</title>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; background: #f0f2f5; }
-        .card { background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.1); width: 100%; max-width: 400px; text-align: center; }
-        h2 { color: #1a73e8; margin-bottom: 1.5rem; }
-        input[type="file"] { margin: 1rem 0; padding: 10px; border: 1px dashed #ccc; width: 100%; box-sizing: border-box; }
-        button { width: 100%; padding: 12px; margin-top: 10px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.3s; }
-        #translateBtn { background: #1a73e8; color: white; }
-        #translateBtn:disabled { background: #ccc; cursor: not-allowed; }
-        #downloadBtn { background: #34a853; color: white; display: none; margin-top: 15px; }
-        #status { margin-top: 15px; font-size: 14px; color: #555; line-height: 1.5; }
+        body { font-family: sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; background: #f4f7f6; margin: 0; }
+        .card { background: #fff; padding: 2rem; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); width: 350px; text-align: center; }
+        h2 { color: #333; }
+        input { width: 100%; margin: 1rem 0; }
+        button { width: 100%; padding: 12px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; margin-bottom: 10px; }
+        #translateBtn { background: #007bff; color: #fff; }
+        #translateBtn:disabled { background: #ccc; }
+        #downloadBtn { background: #28a745; color: #fff; display: none; } /* အစမှာ ဖျောက်ထားမယ် */
+        #status { font-size: 14px; margin: 10px 0; color: #666; min-height: 40px; }
     </style>
 </head>
 <body>
@@ -21,26 +21,27 @@
 <div class="card">
     <h2>SRT Translator</h2>
     <input type="file" id="fileInput" accept=".srt">
-    <button id="translateBtn">Translate to Burmese</button>
-    <div id="status"></div>
-    <a id="downloadAnchor" style="display:none;"></a>
-    <button id="downloadBtn">📥 Download Translated File</button>
+    <button id="translateBtn">Translate Now</button>
+    
+    <div id="status">ဖိုင်ရွေးပြီး Translate နှိပ်ပါ</div>
+
+    <button id="downloadBtn" type="button">📥 Download SRT File</button>
 </div>
 
 <script>
-    let translatedData = "";
+    let finalSrtContent = ""; // ဘာသာပြန်ပြီးသား စာသား သိမ်းဖို့
 
-    document.getElementById('translateBtn').onclick = async () => {
-        const fileInput = document.getElementById('fileInput');
-        const status = document.getElementById('status');
-        const btn = document.getElementById('translateBtn');
-        const dlBtn = document.getElementById('downloadBtn');
+    const fileInput = document.getElementById('fileInput');
+    const translateBtn = document.getElementById('translateBtn');
+    const downloadBtn = document.getElementById('downloadBtn');
+    const status = document.getElementById('status');
 
-        if (!fileInput.files[0]) return alert("ဖိုင်အရင်ရွေးပါ");
+    translateBtn.onclick = async () => {
+        if (!fileInput.files[0]) return alert("SRT ဖိုင်အရင်ရွေးပါ");
 
-        status.innerHTML = "⏳ ဘာသာပြန်နေသည်... <br><small>စက္ကန့် ၃၀ ကျော်ပါက Timeout ဖြစ်နိုင်ပါသည်။</small>";
-        btn.disabled = true;
-        dlBtn.style.display = "none";
+        translateBtn.disabled = true;
+        downloadBtn.style.display = "none";
+        status.innerText = "⏳ ဘာသာပြန်နေသည်... ခဏစောင့်ပါ။";
 
         const formData = new FormData();
         formData.append("file", fileInput.files[0]);
@@ -53,46 +54,45 @@
 
             const result = await response.json();
 
-            if (result.success) {
-                translatedData = result.translatedText;
-                status.innerHTML = "✅ ဘာသာပြန်ပြီးပါပြီ။";
-                dlBtn.style.display = "block";
+            if (result.success && result.translatedText) {
+                finalSrtContent = result.translatedText; // စာသားကို Variable ထဲ သိမ်းလိုက်ပြီ
+                status.innerText = "✅ ဘာသာပြန်ခြင်း အောင်မြင်သည်။";
+                downloadBtn.style.display = "block"; // Download ခလုတ်ကို ဖော်လိုက်ပြီ
             } else {
-                status.innerHTML = "❌ Error: " + (result.error || "ဘာသာပြန်လို့မရပါ။");
+                status.innerText = "❌ Error: " + (result.error || "မသိရသောအမှား");
+                translateBtn.disabled = false;
             }
-        } catch (error) {
-            status.innerHTML = "❌ Server ချိတ်ဆက်မှု အမှားရှိနေသည်။";
-            console.error(error);
-        } finally {
-            btn.disabled = false;
-        }
-    };
-
-    // Download Logic ကို ပိုမိုခိုင်မာအောင် ပြင်ဆင်ထားခြင်း
-    document.getElementById('downloadBtn').onclick = () => {
-        if (!translatedData) return;
-
-        try {
-            const blob = new Blob([translatedData], { type: 'text/srt;charset=utf-8' });
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            
-            a.style.display = 'none';
-            a.href = url;
-            a.download = 'translated_myanmar.srt';
-            
-            document.body.appendChild(a);
-            a.click();
-            
-            // ခဏနေရင် Memory ထဲက ပြန်ဖျက်မယ်
-            setTimeout(() => {
-                document.body.removeChild(a);
-                window.URL.revokeObjectURL(url);
-            }, 100);
         } catch (err) {
-            alert("Download ဆွဲရန် အမှားတစ်ခုရှိနေပါသည်: " + err.message);
+            status.innerText = "❌ Server ချိတ်ဆက်မှု အမှားရှိသည်။";
+            translateBtn.disabled = false;
         }
     };
+
+    // Download လုပ်တဲ့ အပိုင်းကို သီးသန့် ရေးထားခြင်း
+    downloadBtn.addEventListener('click', function() {
+        if (!finalSrtContent) {
+            alert("Download လုပ်စရာ ဖိုင်မရှိသေးပါ။");
+            return;
+        }
+
+        // ဘာသာပြန်ပြီးသား စာသားကို Blob ပြောင်းမယ်
+        const blob = new Blob([finalSrtContent], { type: 'text/srt;charset=utf-8' });
+        const url = window.URL.createObjectURL(blob);
+        
+        // ယာယီ Link တစ်ခု ဖန်တီးပြီး အလိုအလျောက် နှိပ်မယ်
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', 'translated_myanmar.srt');
+        document.body.appendChild(link);
+        
+        link.click(); // ဒီမှာ Download စလုပ်ပါလိမ့်မယ်
+        
+        // ပြန်ဖျက်မယ်
+        setTimeout(() => {
+            document.body.removeChild(link);
+            window.URL.revokeObjectURL(url);
+        }, 200);
+    });
 </script>
 
 </body>
